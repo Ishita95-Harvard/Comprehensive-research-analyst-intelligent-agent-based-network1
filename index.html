@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAWM Intelligence - Client Data Analysis</title>
+    
+    <!-- Libraries -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <style>
+        :root {
+            /* RAWM Luxury Color Palette */
+            --primary: #000814;
+            --secondary: #001d3d;
+            --accent: #ffd60a;
+            --accent-light: #ffea80;
+            --accent-dark: #cca300;
+            --success: #38b000;
+            --warning: #ff9100;
+            --danger: #dc2f02;
+            --text: #f8f9fa;
+            --text-secondary: #adb5bd;
+            --text-muted: #6c757d;
+            --card-bg: rgba(13, 27, 42, 0.8);
+            --card-border: rgba(255, 214, 10, 0.15);
+            --chart-gradient: linear-gradient(135deg, #ffd60a 0%, #ff9100 100%);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        body {
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(255, 214, 10, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(56, 176, 0, 0.03) 0%, transparent 50%),
+                linear-gradient(135deg, #000814 0%, #001d3d 100%);
+            color: var(--text);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(90deg, rgba(0, 29, 61, 0.9) 0%, rgba(0, 20, 41, 0.9) 100%);
+            border-radius: 16px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            color: var(--primary);
+            box-shadow: 0 4px 12px rgba(255, 214, 10, 0.3);
+        }
+        
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .logo h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--accent-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+        
+        .logo-subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+        
+        /* Main Layout */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .section-title {
+            font-size: 13px;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+        
+        .data-upload {
+            background: linear-gradient(135deg, rgba(13, 27, 42, 0.8) 0%, rgba(0, 29, 61, 0.6) 100%);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+        }
+        
+        .upload-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(255, 214, 10, 0.1) 0%, rgba(255, 145, 0, 0.1) 100%);
+            border: 2px dashed rgba(255, 214, 10, 0.3);
+            color: var(--accent);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .upload-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 214, 10, 0.2) 0%, rgba(255, 145, 0, 0.2) 100%);
+            border-color: var(--accent);
+        }
+        
+        .file-name {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: center;
+            word-break: break-all;
+        }
+        
+        .filters {
+            background: linear-gradient(135deg, rgba(13, 27, 42, 0.8) 0%, rgba(0, 29, 61, 0.6) 100%);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+        }
+        
+        .filter-group {
+            margin-bottom: 15px;
+        }
+        
+        .filter-label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .filter-select, .filter-input {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 13px;
+        }
+        
+        .filter-select:focus, .filter-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, rgba(13, 27, 42, 0.8) 0%, rgba(0, 29, 61, 0.6) 100%);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(255, 214, 10, 0.1);
+        }
+        
+        .stat-title {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--text) 0%, var(--accent-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+        
+        .stat-change {
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .stat-change.positive {
+            color: var(--success);
+        }
+        
+        .stat-change.negative {
+            color: var(--danger);
+        }
+        
+        /* Charts Container */
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        .chart-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+        
+        .chart-title {
+            font-size: 14px;
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .chart-container {
+            height: 250px;
+        }
+        
+        /* Data Table */
+        .data-table-container {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+        
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .table-title {
+            font-size: 16px;
+            color: var(--accent);
+            font-weight: 600;
+        }
+        
+        .table-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .search-input {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 13px;
+            min-width: 200px;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        
+        .data-table th {
+            background: rgba(0, 29, 61, 0.8);
+            color: var(--accent);
+            font-weight: 600;
+            text-align: left;
+            padding: 12px 15px;
+            border-bottom: 2px solid var(--card-border);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .data-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+        }
+        
+        .data-table tr:hover {
+            background: rgba(255, 214, 10, 0.05);
+        }
+        
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-interested {
+            background: rgba(56, 176, 0, 0.2);
+            color: var(--success);
+        }
+        
+        .status-not-interested {
+            background: rgba(220, 47, 2, 0.2);
+            color: var(--danger);
+        }
+        
+        .status-busy {
+            background: rgba(255, 145, 0, 0.2);
+            color: var(--warning);
+        }
+        
+        .status-neutral {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+        }
+        
+        /* Map Container */
+        .map-container {
+            background: var(--card-bg);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--card-border);
+            position: relative;
+            height: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+            border-radius: 16px;
+        }
+        
+        .map-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 29, 61, 0.9);
+            padding: 12px;
+            border-radius: 12px;
+            display: flex;
+            gap: 8px;
+            z-index: 1;
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(10px);
+        }
+        
+        /* Insights Panel */
+        .insights-panel {
+            background: linear-gradient(135deg, rgba(13, 27, 42, 0.9) 0%, rgba(0, 29, 61, 0.9) 100%);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--card-border);
+            margin-top: 20px;
+        }
+        
+        .insights-title {
+            font-size: 16px;
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        
+        .insight-card {
+            background: rgba(0, 29, 61, 0.5);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 214, 10, 0.1);
+        }
+        
+        .insight-card.highlight {
+            border-color: var(--accent);
+            background: linear-gradient(135deg, rgba(255, 214, 10, 0.1) 0%, rgba(255, 145, 0, 0.05) 100%);
+        }
+        
+        .insight-title {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .insight-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 29, 61, 0.5);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 100%);
+        }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .insights-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .insights-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .table-header {
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+            
+            .search-input {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">R</div>
+                <div class="logo-text">
+                    <h1>RAWM INTELLIGENCE</h1>
+                    <div class="logo-subtitle">Client Data Analysis & Insights</div>
+                </div>
+            </div>
+            <div class="header-info">
+                <div style="font-size: 12px; color: var(--text-secondary);">
+                    Last Updated: <span id="lastUpdate">--:--:--</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="data-upload">
+                    <div class="section-title">Data Upload</div>
+                    <label for="csvUpload" class="upload-btn">
+                        📁 Upload CSV File
+                    </label>
+                    <input type="file" id="csvUpload" accept=".csv" style="display: none;">
+                    <div class="file-name" id="fileName">No file selected</div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px; text-align: center;">
+                        Upload "Valion_All_4_Pages_Merged.csv" for analysis
+                    </div>
+                </div>
+                
+                <div class="filters">
+                    <div class="section-title">Filters & Analysis</div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label">City</label>
+                        <select class="filter-select" id="cityFilter">
+                            <option value="all">All Cities</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label">Interest Level</label>
+                        <select class="filter-select" id="interestFilter">
+                            <option value="all">All Status</option>
+                            <option value="interested">Interested</option>
+                            <option value="not-interested">Not Interested</option>
+                            <option value="busy">Busy</option>
+                            <option value="neutral">Neutral</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label">Email Status</label>
+                        <select class="filter-select" id="emailFilter">
+                            <option value="all">All</option>
+                            <option value="has-email">Has Email</option>
+                            <option value="no-email">No Email</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label">Search Term</label>
+                        <input type="text" class="filter-input" id="searchFilter" placeholder="Search clients...">
+                    </div>
+                    
+                    <button class="upload-btn" onclick="applyFilters()" style="margin-top: 10px;">
+                        🔍 Apply Filters
+                    </button>
+                    
+                    <button class="upload-btn" onclick="resetFilters()" style="margin-top: 5px; background: rgba(255, 255, 255, 0.05);">
+                        🔄 Reset Filters
+                    </button>
+                </div>
+                
+                <div class="filters">
+                    <div class="section-title">Data Quality</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">
+                        <div style="margin-bottom: 8px;">
+                            <span>Total Records:</span>
+                            <span id="totalRecords" style="color: var(--accent); float: right;">0</span>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <span>Complete Profiles:</span>
+                            <span id="completeProfiles" style="color: var(--success); float: right;">0</span>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <span>Missing Emails:</span>
+                            <span id="missingEmails" style="color: var(--warning); float: right;">0</span>
+                        </div>
+                        <div>
+                            <span>Data Quality Score:</span>
+                            <span id="qualityScore" style="color: var(--accent); float: right;">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-title">Total Clients</div>
+                        <div class="stat-value" id="statTotalClients">0</div>
+                        <div class="stat-change positive">
+                            <span>↗</span>
+                            <span>Loaded from CSV</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-title">Hot Leads</div>
+                        <div class="stat-value" id="statHotLeads">0</div>
+                        <div class="stat-change positive">
+                            <span>↗</span>
+                            <span>Interested clients</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-title">Gurgaon Clients</div>
+                        <div class="stat-value" id="statGurgaonClients">0</div>
+                        <div class="stat-change positive">
+                            <span>↗</span>
+                            <span>Primary market</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-title">Response Rate</div>
+                        <div class="stat-value" id="statResponseRate">0%</div>
+                        <div class="stat-change negative">
+                            <span>↘</span>
+                            <span>Needs improvement</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Charts -->
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <div class="chart-title">Client Distribution by City</div>
+                        <div class="chart-container" id="cityChart"></div>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <div class="chart-title">Interest Level Analysis</div>
+                        <div class="chart-container" id="interestChart"></div>
+                    </div>
+                </div>
+                
+                <!-- Data Table -->
+                <div class="data-table-container">
+                    <div class="table-header">
+                        <div class="table-title">Client Database</div>
+                        <div class="table-controls">
+                            <input type="text" class="search-input" id="tableSearch" placeholder="Search in table...">
+                            <select class="filter-select" id="tableSort" style="width: 150px;">
+                                <option value="sno">Sort by: S.No</option>
+                                <option value="name">Sort by: Name</option>
+                                <option value="city">Sort by: City</option>
+                                <option value="interest">Sort by: Interest</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="table-wrapper">
+                        <table class="data-table" id="clientTable">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Mobile</th>
+                                    <th>City</th>
+                                    <th>Area</th>
+                                    <th>Remarks</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <!-- Data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Map -->
+                <div class="map-container">
+                    <div class="map-overlay">
+                        <button class="upload-btn" onclick="toggleLayer('clients')" style="padding: 6px 12px; font-size: 12px;">
+                            👥 Clients
+                        </button>
+                        <button class="upload-btn" onclick="toggleLayer('hotspots')" style="padding: 6px 12px; font-size: 12px;">
+                            🔥 Hotspots
+                        </button>
+                    </div>
+                    <div id="map"></div>
+                </div>
+                
+                <!-- Insights Panel -->
+                <div class="insights-panel">
+                    <div class="insights-title">
+                        📊 AI Insights & Recommendations
+                    </div>
+                    <div class="insights-grid">
+                        <div class="insight-card highlight">
+                            <div class="insight-title">
+                                <span>🎯</span> Top Opportunity
+                            </div>
+                            <div class="insight-value" id="topOpportunity">Gurgaon Sector 50</div>
+                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 5px;">
+                                High concentration of HNI clients
+                            </div>
+                        </div>
+                        
+                        <div class="insight-card">
+                            <div class="insight-title">
+                                <span>📈</span> Success Probability
+                            </div>
+                            <div class="insight-value" id="successProbability">68%</div>
+                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 5px;">
+                                Based on current response patterns
+                            </div>
+                        </div>
+                        
+                        <div class="insight-card">
+                            <div class="insight-title">
+                                <span>💡</span> Recommended Action
+                            </div>
+                            <div class="insight-value">Focus on Gurgaon</div>
+                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 5px;">
+                                42% of total clients are in Gurgaon
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample CSV data (embedded in the HTML)
+        const sampleCSV = `S.No,Name,Email,Mobile,Address,Area_Sector,City,Remarks
+82,Mr. Aman Kumar,,919891285486,Tata Telecommunications Apartment 28 E,Communication Apartments,Delhi,
+85,Mr. Atul Kumar Ahuja,atul.pramod@dnpservices.com,919871488719,2734 New Housing Board Opp State Bank of Patiala Cantt Branch,,Gurgaon,N.A.
+86,Mrs. Kiran Mal,,9811199808,2734 New Housing Board Opp State Bank of Patiala Cantt Branch,,Gurgaon,N.A.
+87,Ms. Yogita Wadhwa,ramesh@indotour.com,919810005151,K-5/11 DLF Phase-II,,Gurgaon,Left
+88,Mr. Rajat K. Dhawan,rajat_dhawan@kiesco.com,919810825596,R-34 Windsor Court DLF Phase-II,,Gurgaon,Not interested
+90,Ms. Aashoo Bag,,919830400657,25 Cantt Road,Cantonment,Lucknow,Call cancelled
+92,Mr. Mahesh Champi,mahesh@gmail.com,919212105554,Villa No. 197 Tatvam Villas VIP Winged,Sector-48 Near Omaxe Mall,Gurgaon,N.A.
+95,Ms. Preeti Malik,preetim@yahoo.com,919810577889,104/105 Sector-5 IMT Manesar,,Gurgaon,Busy
+99,Mr. Anup Singh,anup_singh23@yahoo.com,919910066131,House No. 779 Sector-14,,Faridabad (Haryana),
+100,Mr. Harpreet Singh Khara,malcolimkhara@gmail.com,919837035959,A-6 Sushant Lok Block-C Sushant Lok-1,,Gurgaon (Haryana),Do not call
+101,Ms. Inderjit Kaur,,919837035959,A-6 Sushant Lok Block-C Sushant Lok-1,,Gurgaon (Haryana),Not interested
+102,M/S Suraj Realtors Pvt Ltd,sukhbir07@gmail.com,919810702727,901 DLF City Court M.G. Road Sikanderpur,,Gurgaon (Haryana),Wrong no
+103,M/S Rakhi Garments Pvt Ltd,rakhi@ewl.in,919810074644,9 H&J Blocks Local Shopping Centre,Sarita Vihar,New Delhi,Not interested
+34,Mr. Ramesh Kumar Wadhwa,ramesh@indotour.com,919810005151,R-497 DLF Phase-III,,Gurgaon,Not answering
+35,Ms. Usha Puri,hpurin@yahoo.com,919780917168,A-308 Uniworld City,Sector-30,Gurgaon,Busy
+36,Mr. Gaurav Sharma,pilantysharma@gmail.com,919811676962,House No. 204 Deerwood Chase,Nirvana Country Sector-50,Gurgaon,-
+40,Mrs. Sangeeta Suri,sangeetasuri3108@gmail.com,919980033678,C-606 KDB Friends Colony,,New Delhi,Very angry
+41,M/S Vinodka Consultants & Engineers (P) Ltd,singh@gistnet.com,919810905174,"Indra House 57, Institutional Area",Sector-44,Gurgaon,Busy
+42,Ms. Veena Mathur,veena.mathur@gmail.com,919810748044,EG 3/10,Garden Estate M.G. Road,Gurgaon,Not answering
+44,Mr. Varun Lochab,varunlochab@yahoo.com,919819143468,"1502 A, Dosti Acres Blossom Off S. M. Road",Wadala (E),Mumbai,"Not exist, wrong no"
+45,Mrs. Shivani Thakrar,dimpy19@hotmail.com,919910201111,B3-202 Uniworld City,Sector-31,Gurgaon,Not interested
+46,Mr. Manoj Tewani,manoj@tewani.net,919810020483,Manoj Tewani D-17B 3rd Floor,Lajpat Nagar-II,New Delhi,Not answering
+47,Mr. Pankaj Grover,pankaj.grover@gmail.com,919959919876,A-001 NCC Nagarjuna Residency,"Opp. Nursery Boys School, Gachibowli",Hyderabad,Not interested
+49,Ms. Meenu Bhargava,meenu.bhargava94@gmail.com,919891979702,D-7 Uniworld City,Sector-30,Gurgaon,Number not picked
+50,Ms. Meenu Bhargava,rajat_bhargava@mckinsey.com,919811100799,D-7 Uniworld City,Sector-30,Gurgaon,-
+51,Mr. Rajat Bhargava,rajat_bhargava@mckinsey.com,919811100799,D-7,Uniworld City Sector-30,Gurgaon,Busy no
+52,Mrs. Kanchan Neb,kanchan_neb@hotmail.com,919811823671,No. 17 Sukhchain Marg,DLF City PH-I,Gurgaon,"Number switched off, unreachable"
+53,Mr. Veraj Neb,,9560588588,No. 17 Sukhchain Marg,DLF City PH-I,Gurgaon,Name field
+55,Mr. Anupam Gupta,,919811085488,K-27 B Hauz Khas Enclave,,New Delhi,"Not interested, called"
+56,Ms. Avantika Gupta,,9811514136,K-27 B Hauz Khas Enclave,,New Delhi,No busy
+57,Mr. Amit Kohli,amitkohli7@gmail.com,919818382299,E-389 A Ground Floor Greater Kailash Part-II,,New Delhi,"Interested, call needed"
+58,M/S Angelina Impex Pvt Ltd,singh.brijendrakumar@gmail.com,917860786023,76 Laxman Puri Faizabad Road,,Lucknow,Wrong entry
+59,Mr. Rajat K. Dhawan,rajat_dhawan@kiesco.com,919810825596,R-34 Windsor Court DLF Phase-II,,Gurgaon,X
+61,Mr. Sanjay Raibal,sraibal2@yahoo.com,919811580714,80/1 Malibu Town Sohna Road,,Gurgaon,X
+63,Mr. Nitish Kumar Roy,roynitish@gmail.com,919810358580,"A-12/7, DLF City PH-I",,Gurgaon,X
+64,Mr. Nitish Kumar Roy,roynitish@gmail.com,919810358580,"A-12/7, DLF City PH-I",,Gurgaon,X
+65,Mr. Nitish Kumar Roy,roynitish@gmail.com,919810358580,"A-12/7, DLF City PH-I",,Gurgaon,X
+66,M/S Prabhu Fashion,info@prabhufashion.com,919810400274,110 Udyog Vihar,Phase-IV,Gurgaon,X
+67,Mr. Chatur Bhuj Bhandari,bhandaribh@gmail.com,919810263344,S.F. No. 324 Thottipalayam,,Andheri Palayam PO Tirupur,X
+68,Ms. Nandita Singh,,919810102990,T-22/10 1st Floor,DLF City PH-III,Gurgaon,X
+69,Mr. Rajesh Singh,,9810102990,T-22/10 1st Floor,DLF City PH-III,Gurgaon,X
+70,Ms. Nika Choudhary,,919811920235,A-603 Global Apartment Plot No. 75,Sector-56,Gurgaon (Haryana),X
+71,Mr. Tej Mohan Sachdev,tms2000@sify.com,919873709766,67 Sundar Nagar,,New Delhi,No
+72,Mr. Vivek Jain,vj@actiontesa.com,919810007353,22/18 East Punjabi Bagh,,New Delhi,P.A.
+73,M/S Techtronics India Ltd,,919810500555,138-A Udyog Vihar,Phase-VI,Gurgaon,Busy
+74,Mr. Kamal Khanna,kamal.khanna@deshaw.com,919810503631,1401 INEZ Tower A (Opp Post Office),Mori Road Mahim W,Mumbai,Mumbai enquiry
+75,Ms. Neha Khanna,,9619516116,1401 INEZ Tower A (Opp Post Office),Mori Road Mahim W,Mumbai,DNP / Turn
+76,Mr. Nitish Kumar Roy,roynitish@gmail.com,919910365060,A-12/17 DLF City PH-I,,Gurgaon,Not ans
+77,Mr. Buddhadev Ghosh,,919740983885,#123 Jodhpur Park,,Kolkata,Website to share
+80,Mr. Sharmi Kapur,abir_kap69@hotmail.com,919810019596,C-588 Ground Floor,New Friends Colony,New Delhi,Busy
+81,Dr. Shayla Chopra,shayla_joomba@yahoo.com,919810855000,E-68 Masjid Moth,Greater Kailash-II,New Delhi,
+2,Ms. Baljinder Kaur Sawa,bobbywawa@yahoo.com,91950308248,"Apartment 1102, Tower-6, The Close",Nirvana Country Sector-50,Gurgaon,"Not interested, Easy money"
+3,M/S Multiplier Realtech Pvt Ltd,md@therealjus.in,919810004460,"399 P, Sector-29 Near Iffco Chowk Metro Station",,Gurgaon,"Done, will revert"
+4,Mr. Amandeep Singh,amar@darchitecture.in,919910144884,S/23 DLF Phase-II,,Gurgaon,No
+5,Ms. Sonali Singh,,9910122884,S/23 DLF Phase-II,,Gurgaon,"In touch, Busy"
+6,Mr. Rajan Arora,,919811298591,"H No. C-2/13, DLF Ph-I",,Gurgaon,Busy
+9,Mr. Jyoti Kamal Jhamb,jkjhamb@hotmail.com,919971590670,"Apartment 503, Tower-8",Fresco Nirvana Country Sector-50,Gurgaon,Not answering
+10,Mr. Suneet Kalra,suneetkalra@kalrapaper.com,919999990991,GC-14 Shivaji Enclave,Rajouri Garden,New Delhi,Also answering
+12,Ms. Bibha Singh,bibha29@gmail.com,919899988751,G-104 Saraswati Apartments,"97 I.P Extn, Patparganj",Delhi,"Busy, will call back"
+13,Ms. Alka Sharma,alka.sharma@gmail.com,919818238548,"House No. 294, Deerwood Chase",Nirvana Country Sector-50,Gurgaon,No
+14,Ms. Amrita Paul,paulgulshan@yahoo.co.in,919810775333,"Q 5/21, DLF Phase-II",,Gurgaon,Not answering
+15,Mr. Sudhir Kumar Sachdeva,sidpro@airtelmail.in,919810018888,E-9/19 Vasant Vihar,,New Delhi,Thanks
+17,Ms. Shobha Bhatt,rajeevbhatt68@gmail.com,919811196131,G-104 Saraswati Apartments,"97 I.P Extn, Patparganj",New Delhi,Relative
+18,Ms. Neera Sachdeva,tms2000@sify.com,919873709766,"67, Sundar Nagar",,New Delhi,Call cancelled DND
+21,Mr. Vinod Kumar Bharel,vinod.bharel@gmail.com,919811096004,"H. No.2, Masjid Moth Village",,New Delhi,Busy now
+31,Mr. Pankaj Raj,pankaj@searchvalue.co.in,919810237932,A-802 Sun City Heights,DLF Golf Course Road Sector-54,Gurgaon,Very much interested
+32,Mr. Ramesh Kumar Wadhwa,ramesh@indotour.com,919810005151,"K-5/11, DLF Phase-II",,Gurgaon,Not interested
+33,M/S Sri Chand Rajesh Kumar Agro Pvt Ltd,r_harjani@yahoo.co.in,919811180480,C-13 New Sabzi Mandi Azadpur,,New Delhi,Out of service`;
+
+        // Global State
+        let clientData = [];
+        let filteredData = [];
+        let cityChart = null;
+        let interestChart = null;
+        
+        // City coordinates for mapping
+        const cityCoordinates = {
+            'Gurgaon': [77.0266, 28.4595],
+            'New Delhi': [77.2090, 28.6139],
+            'Delhi': [77.2090, 28.6139],
+            'Mumbai': [72.8777, 19.0760],
+            'Lucknow': [80.9462, 26.8467],
+            'Hyderabad': [78.4867, 17.3850],
+            'Kolkata': [88.3639, 22.5726],
+            'Faridabad (Haryana)': [77.3198, 28.4089]
+        };
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+            setupEventListeners();
+            loadSampleData();
+            updateTime();
+            setInterval(updateTime, 1000);
+        });
+        
+        // Initialize Map
+        function initMap() {
+            mapboxgl.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4M29iazA2Z2gycXA4N2pmbDZmangifQ.-g_vE53SD2WrJ6tFX7QHmA';
+            
+            const map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/dark-v10',
+                center: [77.2090, 28.6139], // New Delhi
+                zoom: 5,
+                pitch: 0,
+                bearing: 0
+            });
+            
+            window.map = map;
+        }
+        
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // File upload
+            document.getElementById('csvUpload').addEventListener('change', handleFileUpload);
+            
+            // Search input
+            document.getElementById('tableSearch').addEventListener('input', function(e) {
+                applyFilters();
+            });
+            
+            // Sort select
+            document.getElementById('tableSort').addEventListener('change', function(e) {
+                sortTable(e.target.value);
+            });
+        }
+        
+        // Handle File Upload
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            document.getElementById('fileName').textContent = file.name;
+            
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    processData(results.data);
+                    showNotification('File uploaded successfully!', 'success');
+                },
+                error: function(error) {
+                    showNotification('Error parsing CSV file', 'danger');
+                    console.error('CSV parsing error:', error);
+                }
+            });
+        }
+        
+        // Load Sample Data
+        function loadSampleData() {
+            document.getElementById('fileName').textContent = 'Valion_All_4_Pages_Merged.csv (Sample)';
+            
+            Papa.parse(sampleCSV, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    processData(results.data);
+                    showNotification('Sample data loaded successfully!', 'success');
+                },
+                error: function(error) {
+                    showNotification('Error loading sample data', 'danger');
+                    console.error('Sample data parsing error:', error);
+                }
+            });
+        }
+        
+        // Process Data
+        function processData(data) {
+            clientData = data.map((row, index) => {
+                // Clean and standardize data
+                const cleanRow = {
+                    id: index + 1,
+                    sno: row['S.No'] || '',
+                    name: row['Name'] || '',
+                    email: (row['Email'] || '').trim(),
+                    mobile: (row['Mobile'] || '').toString(),
+                    address: row['Address'] || '',
+                    area: row['Area_Sector'] || '',
+                    city: (row['City'] || '').replace(/[()]/g, '').trim(),
+                    remarks: row['Remarks'] || '',
+                    
+                    // Enhanced fields
+                    interestLevel: analyzeInterest(row['Remarks'] || ''),
+                    hasEmail: !!row['Email'] && row['Email'].includes('@'),
+                    isHNI: analyzeHNI(row['Address'] || '', row['Area_Sector'] || ''),
+                    coordinates: getCityCoordinates((row['City'] || '').replace(/[()]/g, '').trim())
+                };
+                
+                return cleanRow;
+            });
+            
+            // Initialize filtered data
+            filteredData = [...clientData];
+            
+            // Update UI
+            updateStats();
+            updateCharts();
+            updateTable();
+            updateFilters();
+            updateMap();
+            updateInsights();
+        }
+        
+        // Analyze Interest Level from Remarks
+        function analyzeInterest(remarks) {
+            const remark = remarks.toLowerCase();
+            
+            if (remark.includes('interested') || remark.includes('very much interested') || remark.includes('call needed')) {
+                return 'interested';
+            } else if (remark.includes('not interested') || remark.includes('do not call') || remark.includes('no') || remark.includes('x')) {
+                return 'not-interested';
+            } else if (remark.includes('busy') || remark.includes('not answering') || remark.includes('call back')) {
+                return 'busy';
+            } else {
+                return 'neutral';
+            }
+        }
+        
+        // Analyze if client is HNI based on address/area
+        function analyzeHNI(address, area) {
+            const addressStr = (address + ' ' + area).toLowerCase();
+            const hniIndicators = [
+                'dlf', 'phase', 'sector', 'university', 'nirvana', 'country', 
+                'tower', 'apartment', 'estate', 'villa', 'luxury', 'premium',
+                'golf course', 'sushant lok', 'vip', 'global apartment'
+            ];
+            
+            return hniIndicators.some(indicator => addressStr.includes(indicator));
+        }
+        
+        // Get City Coordinates
+        function getCityCoordinates(city) {
+            const normalizedCity = city.split(' ')[0]; // Take first word
+            return cityCoordinates[normalizedCity] || [77.2090, 28.6139]; // Default to Delhi
+        }
+        
+        // Apply Filters
+        function applyFilters() {
+            const cityFilter = document.getElementById('cityFilter').value;
+            const interestFilter = document.getElementById('interestFilter').value;
+            const emailFilter = document.getElementById('emailFilter').value;
+            const searchTerm = document.getElementById('searchFilter').value.toLowerCase();
+            const tableSearch = document.getElementById('tableSearch').value.toLowerCase();
+            
+            filteredData = clientData.filter(client => {
+                // City filter
+                if (cityFilter !== 'all' && client.city !== cityFilter) {
+                    return false;
+                }
+                
+                // Interest filter
+                if (interestFilter !== 'all' && client.interestLevel !== interestFilter) {
+                    return false;
+                }
+                
+                // Email filter
+                if (emailFilter === 'has-email' && !client.hasEmail) {
+                    return false;
+                }
+                if (emailFilter === 'no-email' && client.hasEmail) {
+                    return false;
+                }
+                
+                // Search filter
+                if (searchTerm && !(
+                    client.name.toLowerCase().includes(searchTerm) ||
+                    client.email.toLowerCase().includes(searchTerm) ||
+                    client.city.toLowerCase().includes(searchTerm) ||
+                    client.area.toLowerCase().includes(searchTerm)
+                )) {
+                    return false;
+                }
+                
+                // Table search
+                if (tableSearch && !(
+                    client.name.toLowerCase().includes(tableSearch) ||
+                    client.email.toLowerCase().includes(tableSearch) ||
+                    client.mobile.includes(tableSearch) ||
+                    client.city.toLowerCase().includes(tableSearch) ||
+                    client.area.toLowerCase().includes(tableSearch)
+                )) {
+                    return false;
+                }
+                
+                return true;
+            });
+            
+            updateTable();
+            updateStats();
+            updateCharts();
+            updateMap();
+        }
+        
+        // Reset Filters
+        function resetFilters() {
+            document.getElementById('cityFilter').value = 'all';
+            document.getElementById('interestFilter').value = 'all';
+            document.getElementById('emailFilter').value = 'all';
+            document.getElementById('searchFilter').value = '';
+            document.getElementById('tableSearch').value = '';
+            document.getElementById('tableSort').value = 'sno';
+            
+            filteredData = [...clientData];
+            applyFilters();
+        }
+        
+        // Update Stats
+        function updateStats() {
+            const total = filteredData.length;
+            const hotLeads = filteredData.filter(c => c.interestLevel === 'interested').length;
+            const gurgaonClients = filteredData.filter(c => c.city === 'Gurgaon').length;
+            const responseRate = total > 0 ? Math.round((hotLeads / total) * 100) : 0;
+            
+            // Data quality metrics
+            const totalRecords = clientData.length;
+            const completeProfiles = clientData.filter(c => c.hasEmail && c.mobile).length;
+            const missingEmails = clientData.filter(c => !c.hasEmail).length;
+            const qualityScore = totalRecords > 0 ? Math.round((completeProfiles / totalRecords) * 100) : 0;
+            
+            // Update UI
+            document.getElementById('statTotalClients').textContent = total;
+            document.getElementById('statHotLeads').textContent = hotLeads;
+            document.getElementById('statGurgaonClients').textContent = gurgaonClients;
+            document.getElementById('statResponseRate').textContent = `${responseRate}%`;
+            
+            document.getElementById('totalRecords').textContent = totalRecords;
+            document.getElementById('completeProfiles').textContent = completeProfiles;
+            document.getElementById('missingEmails').textContent = missingEmails;
+            document.getElementById('qualityScore').textContent = `${qualityScore}%`;
+            
+            // Update change indicators
+            document.querySelector('#statResponseRate + .stat-change').className = 
+                responseRate > 30 ? 'stat-change positive' : 'stat-change negative';
+        }
+        
+        // Update Charts
+        function updateCharts() {
+            updateCityChart();
+            updateInterestChart();
+        }
+        
+        // Update City Chart
+        function updateCityChart() {
+            const cityCounts = {};
+            filteredData.forEach(client => {
+                const city = client.city || 'Unknown';
+                cityCounts[city] = (cityCounts[city] || 0) + 1;
+            });
+            
+            const cities = Object.keys(cityCounts);
+            const counts = Object.values(cityCounts);
+            
+            // Sort by count (descending)
+            const sortedIndices = counts.map((_, i) => i)
+                .sort((a, b) => counts[b] - counts[a]);
+            
+            const sortedCities = sortedIndices.map(i => cities[i]);
+            const sortedCounts = sortedIndices.map(i => counts[i]);
+            
+            const colors = sortedCities.map(city => 
+                city === 'Gurgaon' ? '#ffd60a' :
+                city === 'New Delhi' || city === 'Delhi' ? '#38b000' :
+                city === 'Mumbai' ? '#ff9100' :
+                '#6c757d'
+            );
+            
+            const options = {
+                series: [{
+                    data: sortedCounts
+                }],
+                chart: {
+                    type: 'bar',
+                    height: '100%',
+                    background: 'transparent',
+                    foreColor: '#adb5bd',
+                    toolbar: {
+                        show: false
+                    }
+                },
+                plotOptions: {
+                    bar: {
+                        borderRadius: 4,
+                        horizontal: false,
+                        distributed: true,
+                        columnWidth: '60%'
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                xaxis: {
+                    categories: sortedCities,
+                    labels: {
+                        style: {
+                            colors: '#adb5bd',
+                            fontSize: '11px'
+                        }
+                    }
+                },
+                yaxis: {
+                    labels: {
+                        style: {
+                            colors: '#adb5bd',
+                            fontSize: '11px'
+                        }
+                    }
+                },
+                colors: colors,
+                grid: {
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    strokeDashArray: 4
+                },
+                tooltip: {
+                    theme: 'dark',
+                    y: {
+                        formatter: function(val) {
+                            return val + ' clients';
+                        }
+                    }
+                }
+            };
+            
+            if (cityChart) {
+                cityChart.destroy();
+            }
+            
+            cityChart = new ApexCharts(document.querySelector("#cityChart"), options);
+            cityChart.render();
+        }
+        
+        // Update Interest Chart
+        function updateInterestChart() {
+            const interestLevels = ['interested', 'not-interested', 'busy', 'neutral'];
+            const counts = interestLevels.map(level => 
+                filteredData.filter(c => c.interestLevel === level).length
+            );
+            
+            const colors = ['#38b000', '#dc2f02', '#ff9100', '#6c757d'];
+            
+            const options = {
+                series: counts,
+                chart: {
+                    type: 'donut',
+                    height: '100%',
+                    background: 'transparent',
+                    foreColor: '#adb5bd'
+                },
+                colors: colors,
+                labels: ['Interested', 'Not Interested', 'Busy', 'Neutral'],
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        colors: '#adb5bd',
+                        useSeriesColors: false
+                    }
+                },
+                dataLabels: {
+                    enabled: true,
+                    formatter: function(val) {
+                        return Math.round(val) + '%';
+                    },
+                    dropShadow: {
+                        enabled: false
+                    }
+                },
+                plotOptions: {
+                    pie: {
+                        donut: {
+                            size: '65%',
+                            labels: {
+                                show: true,
+                                total: {
+                                    show: true,
+                                    label: 'Total',
+                                    color: '#adb5bd',
+                                    formatter: function(w) {
+                                        return w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                tooltip: {
+                    theme: 'dark',
+                    y: {
+                        formatter: function(val) {
+                            return val + ' clients';
+                        }
+                    }
+                }
+            };
+            
+            if (interestChart) {
+                interestChart.destroy();
+            }
+            
+            interestChart = new ApexCharts(document.querySelector("#interestChart"), options);
+            interestChart.render();
+        }
+        
+        // Update Table
+        function updateTable() {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+            
+            filteredData.forEach(client => {
+                const row = document.createElement('tr');
+                
+                // Determine status badge
+                let statusClass = 'status-neutral';
+                let statusText = 'Neutral';
+                
+                switch(client.interestLevel) {
+                    case 'interested':
+                        statusClass = 'status-interested';
+                        statusText = 'Interested';
+                        break;
+                    case 'not-interested':
+                        statusClass = 'status-not-interested';
+                        statusText = 'Not Interested';
+                        break;
+                    case 'busy':
+                        statusClass = 'status-busy';
+                        statusText = 'Busy';
+                        break;
+                }
+                
+                row.innerHTML = `
+                    <td>${client.sno}</td>
+                    <td style="color: var(--text); font-weight: 500;">${client.name}</td>
+                    <td>${client.email || '<span style="color: var(--warning);">No Email</span>'}</td>
+                    <td>${client.mobile}</td>
+                    <td>${client.city}</td>
+                    <td>${client.area}</td>
+                    <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${client.remarks}</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Update Filters
+        function updateFilters() {
+            const cityFilter = document.getElementById('cityFilter');
+            const cities = [...new Set(clientData.map(c => c.city).filter(Boolean))].sort();
+            
+            // Clear existing options (keep "All Cities")
+            while (cityFilter.options.length > 1) {
+                cityFilter.remove(1);
+            }
+            
+            // Add city options
+            cities.forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                cityFilter.appendChild(option);
+            });
+        }
+        
+        // Sort Table
+        function sortTable(criteria) {
+            filteredData.sort((a, b) => {
+                switch(criteria) {
+                    case 'name':
+                        return a.name.localeCompare(b.name);
+                    case 'city':
+                        return a.city.localeCompare(b.city);
+                    case 'interest':
+                        const interestOrder = { 'interested': 0, 'busy': 1, 'neutral': 2, 'not-interested': 3 };
+                        return interestOrder[a.interestLevel] - interestOrder[b.interestLevel];
+                    default: // 'sno'
+                        return parseInt(a.sno) - parseInt(b.sno);
+                }
+            });
+            
+            updateTable();
+        }
+        
+        // Update Map
+        function updateMap() {
+            if (!window.map) return;
+            
+            // Wait for map to load
+            if (!window.map.loaded()) {
+                window.map.on('load', updateMap);
+                return;
+            }
+            
+            // Remove existing layers
+            if (window.map.getSource('clients')) {
+                window.map.removeLayer('clients-layer');
+                window.map.removeSource('clients');
+            }
+            
+            // Prepare GeoJSON data
+            const features = filteredData
+                .filter(client => client.coordinates)
+                .map(client => ({
+                    type: 'Feature',
+                    geometry: {
+                        type: 'Point',
+                        coordinates: client.coordinates
+                    },
+                    properties: {
+                        name: client.name,
+                        city: client.city,
+                        interest: client.interestLevel,
+                        isHNI: client.isHNI
+                    }
+                }));
+            
+            const geojson = {
+                type: 'FeatureCollection',
+                features: features
+            };
+            
+            // Add source
+            window.map.addSource('clients', {
+                type: 'geojson',
+                data: geojson,
+                cluster: true,
+                clusterMaxZoom: 14,
+                clusterRadius: 50
+            });
+            
+            // Add cluster layers
+            window.map.addLayer({
+                id: 'clusters',
+                type: 'circle',
+                source: 'clients',
+                filter: ['has', 'point_count'],
+                paint: {
+                    'circle-color': [
+                        'step',
+                        ['get', 'point_count'],
+                        '#ffd60a',
+                        10,
+                        '#ff9100',
+                        30,
+                        '#dc2f02'
+                    ],
+                    'circle-radius': [
+                        'step',
+                        ['get', 'point_count'],
+                        15,
+                        10,
+                        20,
+                        30,
+                        25
+                    ]
+                }
+            });
+            
+            // Add cluster count layer
+            window.map.addLayer({
+                id: 'cluster-count',
+                type: 'symbol',
+                source: 'clients',
+                filter: ['has', 'point_count'],
+                layout: {
+                    'text-field': '{point_count_abbreviated}',
+                    'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                    'text-size': 12
+                },
+                paint: {
+                    'text-color': '#000814'
+                }
+            });
+            
+            // Add individual points
+            window.map.addLayer({
+                id: 'clients-layer',
+                type: 'circle',
+                source: 'clients',
+                filter: ['!', ['has', 'point_count']],
+                paint: {
+                    'circle-color': [
+                        'case',
+                        ['==', ['get', 'interest'], 'interested'], '#38b000',
+                        ['==', ['get', 'interest'], 'not-interested'], '#dc2f02',
+                        ['==', ['get', 'interest'], 'busy'], '#ff9100',
+                        '#6c757d'
+                    ],
+                    'circle-radius': 6,
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#ffffff'
+                }
+            });
+            
+            // Add popup
+            window.map.on('click', 'clients-layer', (e) => {
+                const coordinates = e.features[0].geometry.coordinates.slice();
+                const props = e.features[0].properties;
+                
+                while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                    coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                }
+                
+                new mapboxgl.Popup()
+                    .setLngLat(coordinates)
+                    .setHTML(`
+                        <div style="color: var(--primary); padding: 10px; min-width: 200px;">
+                            <h4 style="margin: 0 0 10px 0; color: var(--accent-dark);">${props.name}</h4>
+                            <p style="margin: 5px 0;"><strong>City:</strong> ${props.city}</p>
+                            <p style="margin: 5px 0;"><strong>Interest:</strong> 
+                                <span style="color: ${
+                                    props.interest === 'interested' ? 'var(--success)' :
+                                    props.interest === 'not-interested' ? 'var(--danger)' :
+                                    props.interest === 'busy' ? 'var(--warning)' : 'var(--text-secondary)'
+                                };">
+                                    ${props.interest.charAt(0).toUpperCase() + props.interest.slice(1)}
+                                </span>
+                            </p>
+                            <p style="margin: 5px 0;"><strong>HNI:</strong> ${props.isHNI ? 'Yes' : 'No'}</p>
+                        </div>
+                    `)
+                    .addTo(window.map);
+            });
+            
+            // Change cursor on hover
+            window.map.on('mouseenter', 'clients-layer', () => {
+                window.map.getCanvas().style.cursor = 'pointer';
+            });
+            
+            window.map.on('mouseleave', 'clients-layer', () => {
+                window.map.getCanvas().style.cursor = '';
+            });
+        }
+        
+        // Update Insights
+        function updateInsights() {
+            // Calculate top opportunity area
+            const areaCounts = {};
+            filteredData.forEach(client => {
+                if (client.area) {
+                    areaCounts[client.area] = (areaCounts[client.area] || 0) + 1;
+                }
+            });
+            
+            let topArea = 'Unknown';
+            let maxCount = 0;
+            
+            Object.entries(areaCounts).forEach(([area, count]) => {
+                if (count > maxCount) {
+                    maxCount = count;
+                    topArea = area;
+                }
+            });
+            
+            // Calculate success probability
+            const total = filteredData.length;
+            const interested = filteredData.filter(c => c.interestLevel === 'interested').length;
+            const successProbability = total > 0 ? Math.round((interested / total) * 100) : 0;
+            
+            // Update UI
+            document.getElementById('topOpportunity').textContent = topArea || 'Gurgaon Sector 50';
+            document.getElementById('successProbability').textContent = `${successProbability}%`;
+        }
+        
+        // Toggle Map Layer
+        function toggleLayer(layer) {
+            // Add layer toggling logic here
+            showNotification(`${layer} layer toggled`, 'info');
+        }
+        
+        // Update Time
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('lastUpdate').textContent = timeString;
+        }
+        
+        // Show Notification
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 24px;
+                right: 24px;
+                background: ${type === 'success' ? 'rgba(56, 176, 0, 0.9)' : 
+                            type === 'warning' ? 'rgba(255, 145, 0, 0.9)' : 
+                            type === 'danger' ? 'rgba(220, 47, 2, 0.9)' : 
+                            'rgba(0, 29, 61, 0.9)'};
+                color: white;
+                padding: 16px 24px;
+                border-radius: 12px;
+                border-left: 4px solid ${type === 'success' ? 'var(--success)' : 
+                                     type === 'warning' ? 'var(--warning)' : 
+                                     type === 'danger' ? 'var(--danger)' : 'var(--accent)'};
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                font-weight: 500;
+                backdrop-filter: blur(10px);
+            `;
+            
+            // Add animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOut {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 4 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease forwards';
+                setTimeout(() => notification.remove(), 300);
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
